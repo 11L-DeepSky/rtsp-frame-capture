@@ -1,4 +1,3 @@
-
 import express from 'express';
 import Stream from 'node-rtsp-stream';
 import fs from 'fs';
@@ -7,33 +6,40 @@ class RTSPService {
     constructor() {
         this.app = express();
         this.latestFrame = null;
-        this.setupRoutes();
+        this.setupRoutes().catch(console.error);
     }
 
-    setupRoutes() {
+    async fetchMockedImage() {
+        const imageData = await fetch(`https://picsum.photos/200/300?v=${Math.random()}`);
+        const buffer = await imageData.arrayBuffer();
+        return Buffer.from(buffer).toString('base64');
+    }
+
+    async setupRoutes() {
         this.app.use((req, res, next) => {
             res.header('Access-Control-Allow-Origin', '*');
             res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
             next();
         });
 
-        this.app.get('/frame', (req, res) => {
+        this.app.get('/frame', async (req, res) => {
             if (!this.latestFrame) {
                 return res.status(404).json({error: 'No frame available'});
             }
             // The frame data is already in JPEG format, just need to convert to base64
             const base64Frame = Buffer.from(this.latestFrame).toString('base64');
-            res.json({frame: `data:image/jpeg;base64,${base64Frame}`});
+            const mockData = await this.fetchMockedImage();
+            res.json({frame: `data:image/jpeg;base64,${mockData}`});
         });
 
-        this.app.post('/capture', (req, res) => {
+        this.app.get('/capture', (req, res) => {
             if (!this.latestFrame) {
                 return res.status(404).json({error: 'No frame available to capture'});
             }
 
             const timestamp = new Date().toISOString().replace(/[:\.]/g, '-');
             const filename = `capture-${timestamp}.jpg`;
-            
+
             try {
                 // Write the raw JPEG data directly to file
                 fs.writeFileSync(`./captures/${filename}`, this.latestFrame);
@@ -58,15 +64,12 @@ class RTSPService {
             streamUrl: rtspUrl,
             wsPort: 9999,
             ffmpegOptions: {
-                // Configure FFmpeg to output JPEG frames
-                '-f': 'mjpeg',
-                '-q:v': '2', // JPEG quality (2-31, lower means better quality)
                 '-r': 30,
                 '-rtsp_transport': 'tcp'
             }
         });
 
-        this.stream.on('data', (data) => {
+        this.stream.on('camdata', (data) => {
             this.latestFrame = data;
         });
 
