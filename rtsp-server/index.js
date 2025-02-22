@@ -21,11 +21,11 @@ class RTSPService {
             if (!this.latestFrame) {
                 return res.status(404).json({error: 'No frame available'});
             }
-            const base64Frame = this.latestFrame.toString('base64');
+            // The frame data is already in JPEG format, just need to convert to base64
+            const base64Frame = Buffer.from(this.latestFrame).toString('base64');
             res.json({frame: `data:image/jpeg;base64,${base64Frame}`});
         });
 
-        // New endpoint to capture a single frame
         this.app.post('/capture', (req, res) => {
             if (!this.latestFrame) {
                 return res.status(404).json({error: 'No frame available to capture'});
@@ -35,6 +35,7 @@ class RTSPService {
             const filename = `capture-${timestamp}.jpg`;
             
             try {
+                // Write the raw JPEG data directly to file
                 fs.writeFileSync(`./captures/${filename}`, this.latestFrame);
                 res.json({
                     message: 'Frame captured successfully',
@@ -48,7 +49,6 @@ class RTSPService {
     }
 
     start(rtspUrl, port = 3001) {
-        // Create captures directory if it doesn't exist
         if (!fs.existsSync('./captures')) {
             fs.mkdirSync('./captures');
         }
@@ -58,13 +58,15 @@ class RTSPService {
             streamUrl: rtspUrl,
             wsPort: 9999,
             ffmpegOptions: {
-                '-stats': '',
+                // Configure FFmpeg to output JPEG frames
+                '-f': 'mjpeg',
+                '-q:v': '2', // JPEG quality (2-31, lower means better quality)
                 '-r': 30,
-                "-rtsp_transport": "tcp"
-            },
+                '-rtsp_transport': 'tcp'
+            }
         });
 
-        this.stream.on('camdata', (data) => {
+        this.stream.on('data', (data) => {
             this.latestFrame = data;
         });
 
@@ -86,4 +88,3 @@ const rtspService = new RTSPService();
 // Replace this URL with your actual RTSP stream URL
 const rtspUrl = process.env.RTSP_URL || 'rtsp://localhost:8554/air';
 rtspService.start(rtspUrl);
-
