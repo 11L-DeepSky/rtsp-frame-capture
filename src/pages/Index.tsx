@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 
 const REFRESH_INTERVAL = 1000; // 1 second
 
@@ -20,6 +21,22 @@ const Index = () => {
       console.error('Error fetching frame:', error);
       toast.error('Failed to fetch video frame');
       setIsLoading(false);
+    }
+  };
+
+  const captureFrame = async () => {
+    try {
+      const response = await fetch('http://localhost:3001/capture', {
+        method: 'POST',
+      });
+      
+      if (!response.ok) throw new Error('Failed to capture frame');
+      
+      const data = await response.json();
+      toast.success(`Frame captured as ${data.filename}`);
+    } catch (error) {
+      console.error('Error capturing frame:', error);
+      toast.error('Failed to capture frame');
     }
   };
 
@@ -58,8 +75,17 @@ const Index = () => {
             </div>
           </Card>
 
-          <div className="text-center text-sm text-neutral-500">
-            Auto-refreshing every {REFRESH_INTERVAL / 1000} second
+          <div className="flex justify-center gap-4">
+            <div className="text-sm text-neutral-500">
+              Auto-refreshing every {REFRESH_INTERVAL / 1000} second
+            </div>
+            <Button 
+              onClick={captureFrame}
+              variant="outline"
+              className="bg-white hover:bg-neutral-100"
+            >
+              Capture Frame
+            </Button>
           </div>
         </div>
       </div>
