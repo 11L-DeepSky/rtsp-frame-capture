@@ -1,21 +1,15 @@
 
-import Stream from 'node-rtsp-stream';
-import { Server } from 'http';
 import express from 'express';
-import { Buffer } from 'buffer';
+import Stream from 'node-rtsp-stream';
 
 class RTSPService {
-  private stream: any;
-  private latestFrame: Buffer | null = null;
-  private app: express.Application;
-  private server: Server | null = null;
-
   constructor() {
     this.app = express();
+    this.latestFrame = null;
     this.setupRoutes();
   }
 
-  private setupRoutes() {
+  setupRoutes() {
     this.app.use((req, res, next) => {
       res.header('Access-Control-Allow-Origin', '*');
       res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
@@ -31,7 +25,7 @@ class RTSPService {
     });
   }
 
-  public start(rtspUrl: string, port: number = 3001) {
+  start(rtspUrl, port = 3001) {
     this.stream = new Stream({
       name: 'rtsp-stream',
       streamUrl: rtspUrl,
@@ -42,23 +36,25 @@ class RTSPService {
       },
     });
 
-    this.stream.on('data', (data: Buffer) => {
+    this.stream.on('data', (data) => {
       this.latestFrame = data;
     });
 
-    this.server = this.app.listen(port, () => {
+    this.app.listen(port, () => {
       console.log(`RTSP service listening on port ${port}`);
     });
   }
 
-  public stop() {
+  stop() {
     if (this.stream) {
       this.stream.stop();
-    }
-    if (this.server) {
-      this.server.close();
     }
   }
 }
 
-export const rtspService = new RTSPService();
+// Create and start the service
+const rtspService = new RTSPService();
+
+// Replace this URL with your actual RTSP stream URL
+const rtspUrl = process.env.RTSP_URL || 'rtsp://your-camera-url';
+rtspService.start(rtspUrl);
