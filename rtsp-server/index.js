@@ -1,5 +1,4 @@
 import express from 'express';
-import Stream from 'node-rtsp-stream';
 import fs from 'fs';
 
 class RTSPService {
@@ -23,35 +22,20 @@ class RTSPService {
         });
 
         this.app.get('/frame', async (req, res) => {
-            if (!this.latestFrame) {
-                return res.status(404).json({error: 'No frame available'});
-            }
+            // if (!this.latestFrame) {
+            //     return res.status(404).json({error: 'No frame available'});
+            // }
             // The frame data is already in JPEG format, just need to convert to base64
-            const base64Frame = Buffer.from(this.latestFrame).toString('base64');
-            const mockData = await this.fetchMockedImage();
-            res.json({frame: `data:image/jpeg;base64,${mockData}`});
+            // const base64Frame = Buffer.from(this.latestFrame).toString('base64');
+            // const mockData = await this.fetchMockedImage();
+
+            const data = fs.readFileSync('./frame.jpg', {
+                encoding: 'base64'
+            });
+
+            res.json({frame: `data:image/jpeg;base64,${data}`});
         });
 
-        this.app.get('/capture', (req, res) => {
-            if (!this.latestFrame) {
-                return res.status(404).json({error: 'No frame available to capture'});
-            }
-
-            const timestamp = new Date().toISOString().replace(/[:\.]/g, '-');
-            const filename = `capture-${timestamp}.jpg`;
-
-            try {
-                // Write the raw JPEG data directly to file
-                fs.writeFileSync(`./captures/${filename}`, this.latestFrame);
-                res.json({
-                    message: 'Frame captured successfully',
-                    filename: filename
-                });
-            } catch (error) {
-                console.error('Error saving frame:', error);
-                res.status(500).json({error: 'Failed to save frame'});
-            }
-        });
     }
 
     start(rtspUrl, port = 3001) {
@@ -59,19 +43,20 @@ class RTSPService {
             fs.mkdirSync('./captures');
         }
 
-        this.stream = new Stream({
-            name: 'rtsp-stream',
-            streamUrl: rtspUrl,
-            wsPort: 9999,
-            ffmpegOptions: {
-                '-r': 30,
-                '-rtsp_transport': 'tcp'
-            }
-        });
-
-        this.stream.on('camdata', (data) => {
-            this.latestFrame = data;
-        });
+        // this.stream = new Stream({
+        //     name: 'rtsp-stream',
+        //     streamUrl: rtspUrl,
+        //     wsPort: 9999,
+        //     ffmpegOptions: {
+        //         '-stats': '',
+        //         '-r': 30,
+        //         '-rtsp_transport': 'tcp',
+        //     }
+        // });
+        //
+        // this.stream.on('camdata', (data) => {
+        //     this.latestFrame = data;
+        // });
 
         this.app.listen(port, () => {
             console.log(`RTSP service listening on port ${port}`);
