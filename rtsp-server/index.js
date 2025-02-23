@@ -25,7 +25,7 @@ class RTSPService {
             // const base64Frame = Buffer.from(this.latestFrame).toString('base64');
             // const mockData = await this.fetchMockedImage();
 
-            const data = fs.readFileSync('./frame.jpg', {
+            const data = fs.readFileSync('./captures/frame.jpg', {
                 encoding: 'base64'
             });
 
